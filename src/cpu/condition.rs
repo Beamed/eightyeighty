@@ -44,3 +44,10 @@ impl From<Condition> for ConditionOpCode {
         }
     }
 }
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum Flag {
+    Z,
+    C,
+    P,
+    S,
+}

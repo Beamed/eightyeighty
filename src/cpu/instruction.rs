@@ -68,3 +68,31 @@ pub enum Instruction {
     HLT,
     NOP,
 }
+
+impl Instruction {
+    pub fn get_size(&self) -> u16 {
+        match self {
+            Instruction::LXI(_, _) => 3,
+            Instruction::MVI(_, _) => 2,
+            Instruction::SHLD(_) => 3,
+            Instruction::LHLD(_) => 3,
+            Instruction::STA(_) => 3,
+            Instruction::LDA(_) => 3,
+            Instruction::JCOND(_, _) => 3,
+            Instruction::JMP(_) => 3,
+            Instruction::CCOND(_, _) => 3,
+            Instruction::ADI(_) => 2,
+            Instruction::CALL(_) => 3,
+            Instruction::ACI(_) => 2,
+            Instruction::OUT(_) => 2,
+            Instruction::IN(_) => 2,
+            Instruction::SUI(_) => 2,
+            Instruction::SBI(_) => 2,
+            Instruction::ANI(_) => 2,
+            Instruction::XRI(_) => 2,
+            Instruction::ORI(_) => 2,
+            Instruction::CPI(_) => 2,
+            _ => 1
+        }
+    }
+}
