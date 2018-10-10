@@ -25,83 +25,85 @@ const MVI_ERROR : &str = "Expected 2nd byte for MVI command";
 
 impl CPU {
     pub fn new(mut rom_instructions: VecDeque<u8>) -> Result<CPU, Vec<Instruction>> {
-        let mut instruction_vec : Vec<Instruction> = vec!();
-        let mut memory_vec : Vec<u8> = vec!(65535);
-        let mut addr = 0;
+        let mut memory_vec : Vec<u8> = vec![0; 65535];
+        let mut ind : usize = 0;
         while rom_instructions.len() > 0 {
-            let op = rom_instructions.pop_front().expect("Error parsing opcodes. Should not have been empty.");
-            //giant match below to match EVERY POSSIBLE OP
-            //so, uh, don't read unless you have to
-            addr += instruction.get_size();
-            instruction_vec.push(instruction);
-            memory_vec.push(op);
+            memory_vec[ind] = rom_instructions.pop_front().expect("Error parsing opcodes. Should not have been empty.");;
+            ind += 1;
         }
         Ok(CPU {
-            flags: flags,
-            memory: memory_vec
+            flags: HashMap::new(),
+            memory: memory_vec,
+            pc: 0x0,
         })
     }
+    //giant match below to match EVERY POSSIBLE OP
+    //so, uh, don't read unless you have to
+    pub fn get_next_instruction(&mut self) -> Instruction {
+        let next_instr_ind = self.pc as usize;
+        let instr_lo_byte_ind = (self.pc as u32 + 1) as usize;
+        let instr_hi_byte_ind = (self.pc as u32 + 2) as usize;
+        let next_op = self.memory[next_instr_ind];
 
-    pub fn load_rom_into_mem(mut rom_instructions: VecDeque<u8>) {
-        let instruction = match op {
+        match next_op {
             0x00 => Instruction::NOP,
-            0x01 => get_lxi(RegisterPair::BC, rom_instructions.pop_front(), rom_instructions.pop_front()),
+            0x01 => get_lxi(RegisterPair::BC, self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind]),
             0x02 => Instruction::STAX(RegisterPair::BC),
             0x03 => Instruction::INX(RegisterPair::BC),
             0x04 => Instruction::INR(Register::B),
             0x05 => Instruction::DCR(Register::B),
-            0x06 => Instruction::MVI(Register::B, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x06 => Instruction::MVI(Register::B, self.memory[instr_lo_byte_ind]),
             0x07 => Instruction::RLC,
             0x09 => Instruction::DAD(RegisterPair::BC),
             0x0a => Instruction::LDAX(RegisterPair::BC),
             0x0b => Instruction::DCX(RegisterPair::BC),
             0x0c => Instruction::INR(Register::C),
             0x0d => Instruction::DCR(Register::C),
-            0x0e => Instruction::MVI(Register::C, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x0e => Instruction::MVI(Register::C, self.memory[instr_lo_byte_ind]),
             0x0f => Instruction::RRC,
-            0x11 => get_lxi(RegisterPair::DE, rom_instructions.pop_front(), rom_instructions.pop_front()),
+            0x11 => get_lxi(RegisterPair::DE, self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind]),
             0x12 => Instruction::STAX(RegisterPair::DE),
             0x13 => Instruction::INX(RegisterPair::DE),
             0x14 => Instruction::INR(Register::D),
             0x15 => Instruction::DCR(Register::D),
-            0x16 => Instruction::MVI(Register::D, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x16 => Instruction::MVI(Register::D, self.memory[instr_lo_byte_ind]),
             0x17 => Instruction::RAL,
             0x19 => Instruction::DAD(RegisterPair::DE),
             0x1a => Instruction::LDAX(RegisterPair::DE),
             0x1b => Instruction::DCX(RegisterPair::DE),
             0x1c => Instruction::INR(Register::E),
             0x1d => Instruction::DCR(Register::E),
-            0x1e => Instruction::MVI(Register::E, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x1e => Instruction::MVI(Register::E, self.memory[instr_lo_byte_ind]),
             0x1f => Instruction::RAR,
             0x20 => Instruction::RIM,
-            0x21 => get_lxi(RegisterPair::HL, rom_instructions.pop_front(), rom_instructions.pop_front()),
-            0x22 => Instruction::SHLD(get_addr(&mut rom_instructions)),
+            0x21 => get_lxi(RegisterPair::HL, self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind]),
+            0x22 => Instruction::SHLD(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0x23 => Instruction::INX(RegisterPair::HL),
             0x24 => Instruction::INR(Register::H),
             0x25 => Instruction::DCR(Register::H),
-            0x26 => Instruction::MVI(Register::H, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x26 => Instruction::MVI(Register::H, self.memory[instr_lo_byte_ind]),
             0x27 => Instruction::DAA,
             0x29 => Instruction::DAD(RegisterPair::HL),
-            0x2a => Instruction::LHLD(get_addr(&mut rom_instructions)),
+            0x2a => Instruction::LHLD(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0x2b => Instruction::DCX(RegisterPair::HL),
             0x2c => Instruction::INR(Register::L),
             0x2d => Instruction::DCR(Register::L),
-            0x2e => Instruction::MVI(Register::L, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x2e => Instruction::MVI(Register::L, self.memory[instr_lo_byte_ind]),
             0x2f => Instruction::CMA,
             0x30 => Instruction::SIM,
-            0x31 => get_lxi(RegisterPair::SP, rom_instructions.pop_front(), rom_instructions.pop_front()),
-            0x32 => Instruction::STA(get_addr(&mut rom_instructions)),
+            0x31 => get_lxi(RegisterPair::SP, self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind]),
+            0x32 => Instruction::STA(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0x33 => Instruction::INX(RegisterPair::SP),
             0x34 => Instruction::INR(Register::M),
             0x35 => Instruction::DCR(Register::M),
-            0x36 => Instruction::MVI(Register::M, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x36 => Instruction::MVI(Register::M, self.memory[instr_lo_byte_ind]),
             0x37 => Instruction::STC,
             0x39 => Instruction::DAD(RegisterPair::SP),
-            0x3a => Instruction::LDA(get_addr(&mut rom_instructions)),
+            0x3a => Instruction::LDA(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0x3b => Instruction::DCX(RegisterPair::SP),
             0x3c => Instruction::INR(Register::A),
             0x3d => Instruction::DCR(Register::A),
-            0x3e => Instruction::MVI(Register::A, rom_instructions.pop_front().expect(MVI_ERROR)),
+            0x3e => Instruction::MVI(Register::A, self.memory[instr_lo_byte_ind]),
             0x3f => Instruction::CMC,
             0x40 => Instruction::MOV(Register::B, Register::B),
             0x41 => Instruction::MOV(Register::B, Register::C),
@@ -233,102 +235,100 @@ impl CPU {
             0xbf => Instruction::CMP(Register::A),
             0xc0 => Instruction::RETCOND(Condition::NZ),
             0xc1 => Instruction::POP(RegisterPair::BC),
-            0xc2 => Instruction::JCOND(Condition::NZ, get_addr(&mut rom_instructions)),
-            0xc3 => Instruction::JMP(get_addr(&mut rom_instructions)),
-            0xc4 => Instruction::CCOND(Condition::NZ, get_addr(&mut rom_instructions)),
+            0xc2 => Instruction::JCOND(Condition::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xc3 => Instruction::JMP(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xc4 => Instruction::CCOND(Condition::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xc5 => Instruction::PUSH(RegisterPair::BC),
-            0xc6 => Instruction::ADI(rom_instructions.pop_front().expect("ADI Opcode expected 2nd byte")),
+            0xc6 => Instruction::ADI(self.memory[instr_lo_byte_ind]),
             0xc7 => Instruction::RST(0x00),
             0xc8 => Instruction::RETCOND(Condition::Z),
             0xc9 => Instruction::RET,
-            0xca => Instruction::JCOND(Condition::Z, get_addr(&mut rom_instructions)),
-            0xcc => Instruction::CCOND(Condition::Z, get_addr(&mut rom_instructions)),
-            0xcd => Instruction::CALL(get_addr(&mut rom_instructions)),
-            0xce => Instruction::ACI(rom_instructions.pop_front().expect("ACI Opcode expected 2nd byte")),
+            0xca => Instruction::JCOND(Condition::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xcc => Instruction::CCOND(Condition::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xcd => Instruction::CALL(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xce => Instruction::ACI(self.memory[instr_lo_byte_ind]),
             0xcf => Instruction::RST(0x01),
             0xd0 => Instruction::RETCOND(Condition::NC),
             0xd1 => Instruction::POP(RegisterPair::DE),
-            0xd2 => Instruction::JCOND(Condition::NC, get_addr(&mut rom_instructions)),
-            0xd3 => Instruction::OUT(rom_instructions.pop_front().expect("Expect byte to write to OUT")),
-            0xd4 => Instruction::CCOND(Condition::NC, get_addr(&mut rom_instructions)),
+            0xd2 => Instruction::JCOND(Condition::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xd3 => Instruction::OUT(self.memory[instr_lo_byte_ind]),
+            0xd4 => Instruction::CCOND(Condition::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xd5 => Instruction::PUSH(RegisterPair::DE),
-            0xd6 => Instruction::SUI(rom_instructions.pop_front().expect("Expect byte to SUI")),
+            0xd6 => Instruction::SUI(self.memory[instr_lo_byte_ind]),
             0xd7 => Instruction::RST(0x02),
             0xd8 => Instruction::RETCOND(Condition::C),
-            0xda => Instruction::JCOND(Condition::C, get_addr(&mut rom_instructions)),
-            0xdb => Instruction::IN(rom_instructions.pop_front().expect("Expect byte (port) to read from")),
-            0xdc => Instruction::CCOND(Condition::C, get_addr(&mut rom_instructions)),
-            0xde => Instruction::SBI(rom_instructions.pop_front().expect("Expect byte for SBI")),
+            0xda => Instruction::JCOND(Condition::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xdb => Instruction::IN(self.memory[instr_lo_byte_ind]),
+            0xdc => Instruction::CCOND(Condition::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xde => Instruction::SBI(self.memory[instr_lo_byte_ind]),
             0xdf => Instruction::RST(0x03),
             0xe0 => Instruction::RETCOND(Condition::PO),
             0xe1 => Instruction::POP(RegisterPair::HL),
-            0xe2 => Instruction::JCOND(Condition::PO, get_addr(&mut rom_instructions)),
+            0xe2 => Instruction::JCOND(Condition::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xe3 => Instruction::XTHL,
-            0xe4 => Instruction::CCOND(Condition::PO, get_addr(&mut rom_instructions)),
+            0xe4 => Instruction::CCOND(Condition::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xe5 => Instruction::PUSH(RegisterPair::HL),
-            0xe6 => Instruction::ANI(rom_instructions.pop_front().expect("Expect byte for ANI")),
+            0xe6 => Instruction::ANI(self.memory[instr_lo_byte_ind]),
             0xe7 => Instruction::RST(0x04),
             0xe8 => Instruction::RETCOND(Condition::PE),
             0xe9 => Instruction::PCHL,
-            0xea => Instruction::JCOND(Condition::PE, get_addr(&mut rom_instructions)),
+            0xea => Instruction::JCOND(Condition::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xeb => Instruction::XCHG,
-            0xec => Instruction::CCOND(Condition::PE, get_addr(&mut rom_instructions)),
-            0xee => Instruction::XRI(rom_instructions.pop_front().expect("Expect byte for XRI")),
+            0xec => Instruction::CCOND(Condition::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xee => Instruction::XRI(self.memory[instr_lo_byte_ind]),
             0xef => Instruction::RST(0x05),
             0xf0 => Instruction::RETCOND(Condition::P),
             0xf1 => Instruction::POP_PSW,
-            0xf2 => Instruction::JCOND(Condition::P, get_addr(&mut rom_instructions)),
+            0xf2 => Instruction::JCOND(Condition::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xf3 => Instruction::DI,
-            0xf4 => Instruction::CCOND(Condition::P, get_addr(&mut rom_instructions)),
+            0xf4 => Instruction::CCOND(Condition::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xf5 => Instruction::PUSH_PSW,
-            0xf6 => Instruction::ORI(rom_instructions.pop_front().expect("Expect byte for ORI")),
+            0xf6 => Instruction::ORI(self.memory[instr_lo_byte_ind]),
             0xf7 => Instruction::RST(0x06),
             0xf8 => Instruction::RETCOND(Condition::M),
             0xf9 => Instruction::SPHL,
-            0xfa => Instruction::JCOND(Condition::M, get_addr(&mut rom_instructions)),
+            0xfa => Instruction::JCOND(Condition::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xfb => Instruction::EI,
-            0xfc => Instruction::CCOND(Condition::M, get_addr(&mut rom_instructions)),
-            0xfe => Instruction::CPI(rom_instructions.pop_front().expect("Expected argument for CPI")),
+            0xfc => Instruction::CCOND(Condition::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xfe => Instruction::CPI(self.memory[instr_lo_byte_ind]),
             0xff => Instruction::RST(0x07),
             _ => Instruction::NOP,//if unrecognized, default to NOOP
-        };
+        }
 
     }
-    pub fn write_output_to_file(&self, mut out: BufWriter<File>)
+    pub fn dump_mem_to_file(&mut self, mut out: BufWriter<File>)
     {
         let mut output_buf = String::new();
-        let mut cur_addr = 0;
-        for instruction in &self.instructions {
+        loop {
+            let instruction = self.get_next_instruction();
             output_buf = output_buf.add(
-                format!("{:#00006x}    ", cur_addr).as_str()
-                )
-                .add(
-                    format!("{:?}", instruction).as_str()
-                )
-                .add("\n");
-            cur_addr += instruction.get_size();
+                format!("{:#00006x}    ", self.pc).as_str()
+            )
+            .add(
+                format!("{:?}", instruction).as_str()
+            )
+            .add("\n");
+            if self.pc == 65534 {
+                println!("Reached end of memory.");
+                break;
+            }
+            self.pc += instruction.get_size();
         }
         out.write_all(output_buf.as_bytes());
     }
 
-    pub fn get_next_instruction(&mut self) {
-
+    pub fn reset_pc(&mut self) {
+        self.pc = 0;
     }
 }
 
 
-fn get_lxi(target_reg: RegisterPair, byte_2: Option<u8>, byte_3: Option<u8>) -> Instruction {
-    let lo= byte_2.expect("Expected 2 bytes for LXI command");
-    let hi = byte_3.expect("Expected 2 bytes for LXI command");
-    Instruction::LXI(target_reg, (hi, lo))
+fn get_lxi(target_reg: RegisterPair, byte_2: u8, byte_3: u8) -> Instruction {
+    Instruction::LXI(target_reg, (byte_3, byte_2))
 }
 
-fn create_addr(lo_byte: Option<u8>, hi_byte: Option<u8>) -> Address {
-    let lo = lo_byte.expect("Expected bytes for address.");
-    let hi = hi_byte.expect("Expected bytes for address");
+fn create_addr(lo_byte: u8, hi_byte: u8) -> Address {
+    let lo = lo_byte;
+    let hi = hi_byte;
     return ((hi as u16) << 8) + lo as u16;
-}
-
-fn get_addr(opcodes: &mut VecDeque<u8>) -> Address {
-    create_addr(opcodes.pop_front(), opcodes.pop_front())
 }

@@ -27,11 +27,11 @@ fn main() {
     let file = File::open(path).expect(format!("Unable to open invalid file path: {}", path.to_str().unwrap()).as_str());
     let mut reader = BufReader::new(file);
 
-    let cpu = load_cpu_with_instructions_from_file(reader);
+    let mut cpu = load_cpu_with_instructions_from_file(reader);
     let output_file_path = Path::new(&out_path_name);
     let mut out_file = File::create(output_file_path).expect("Unable to write output file, aborting.");
 
-    cpu.write_output_to_file(BufWriter::new(out_file));
+    cpu.dump_mem_to_file(BufWriter::new(out_file));
 }
 
 pub fn load_cpu_with_instructions_from_file(mut reader: BufReader<File>) -> CPU
