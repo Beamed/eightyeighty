@@ -2,7 +2,7 @@ use std::convert::From;
 
 pub type ConditionOpCode = i8;
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Condition {
+pub enum ConditionOp {
     NZ,
     Z,
     NC,
@@ -13,41 +13,55 @@ pub enum Condition {
     M,
 }
 
-impl From<ConditionOpCode> for Condition  {
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct Condition {
+    z: bool,
+    s: bool,
+    p: bool,
+    cy: bool,
+    ac: bool,
+}
+
+impl Condition {
+    pub fn new() -> Condition {
+        Condition {
+            z: false,
+            s: false,
+            p: false,
+            cy: false,
+            ac: false,
+        }
+    }
+}
+
+impl From<ConditionOpCode> for ConditionOp {
     fn from(op: ConditionOpCode) -> Self {
         match op {
-            0b000 => Condition::NZ,
-            0b001 => Condition::Z,
-            0b010 => Condition::NC,
-            0b011 => Condition::C,
-            0b100 => Condition::PO,
-            0b101 => Condition::PE,
-            0b110 => Condition::P,
-            0b111 => Condition::M,
+            0b000 => ConditionOp::NZ,
+            0b001 => ConditionOp::Z,
+            0b010 => ConditionOp::NC,
+            0b011 => ConditionOp::C,
+            0b100 => ConditionOp::PO,
+            0b101 => ConditionOp::PE,
+            0b110 => ConditionOp::P,
+            0b111 => ConditionOp::M,
             _ => unreachable!(),
         }
     }
 }
 
-impl From<Condition> for ConditionOpCode {
-    fn from(op: Condition) -> Self {
+impl From<ConditionOp> for ConditionOpCode {
+    fn from(op: ConditionOp) -> Self {
         match op {
-            Condition::NZ   => 0b000,
-            Condition::Z    => 0b001,
-            Condition::NC   => 0b010,
-            Condition::C    => 0b011,
-            Condition::PO   => 0b100,
-            Condition::PE   => 0b101,
-            Condition::P    => 0b110,
-            Condition::M    => 0b111,
+            ConditionOp::NZ   => 0b000,
+            ConditionOp::Z    => 0b001,
+            ConditionOp::NC   => 0b010,
+            ConditionOp::C    => 0b011,
+            ConditionOp::PO   => 0b100,
+            ConditionOp::PE   => 0b101,
+            ConditionOp::P    => 0b110,
+            ConditionOp::M    => 0b111,
             _ => unreachable!(),
         }
     }
-}
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Flag {
-    Z,
-    C,
-    P,
-    S,
 }

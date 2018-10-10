@@ -1,6 +1,7 @@
 pub mod register;
 pub mod instruction;
 pub mod condition;
+mod arithmetic_operations;
 
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -8,7 +9,7 @@ use std::fs::File;
 use std::io::{BufReader, Read, BufWriter, Write};
 use std::ops::Add;
 
-use self::condition::{Condition, Flag};
+use self::condition::{ConditionOp, Condition};
 use self::register::{Register, RegisterPair};
 use self::instruction::{Instruction};
 
@@ -17,8 +18,13 @@ pub type Address = u16;
 
 pub struct CPU {
     memory: Vec<u8>,
-    flags: HashMap<Flag, bool>,
+    flags: Condition,
+    registers: HashMap<Register, u8>,
     pc: u16,
+}
+
+pub enum ExecutionError {
+    WrongInstructionType
 }
 
 const MVI_ERROR : &str = "Expected 2nd byte for MVI command";
@@ -31,8 +37,18 @@ impl CPU {
             memory_vec[ind] = rom_instructions.pop_front().expect("Error parsing opcodes. Should not have been empty.");;
             ind += 1;
         }
+        let mut registers = HashMap::new();
+        registers.insert(Register::C, 0x0);
+        registers.insert(Register::E, 0x0);
+        registers.insert(Register::A, 0x0);
+        registers.insert(Register::B, 0x0);
+        registers.insert(Register::D, 0x0);
+        registers.insert(Register::H, 0x0);
+        registers.insert(Register::L, 0x0);
+        registers.insert(Register::M, 0x0);
         Ok(CPU {
-            flags: HashMap::new(),
+            flags: Condition::new(),
+            registers,
             memory: memory_vec,
             pc: 0x0,
         })
@@ -233,63 +249,63 @@ impl CPU {
             0xbd => Instruction::CMP(Register::L),
             0xbe => Instruction::CMP(Register::M),
             0xbf => Instruction::CMP(Register::A),
-            0xc0 => Instruction::RETCOND(Condition::NZ),
+            0xc0 => Instruction::RETCOND(ConditionOp::NZ),
             0xc1 => Instruction::POP(RegisterPair::BC),
-            0xc2 => Instruction::JCOND(Condition::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xc2 => Instruction::JCOND(ConditionOp::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xc3 => Instruction::JMP(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
-            0xc4 => Instruction::CCOND(Condition::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xc4 => Instruction::CCOND(ConditionOp::NZ, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xc5 => Instruction::PUSH(RegisterPair::BC),
             0xc6 => Instruction::ADI(self.memory[instr_lo_byte_ind]),
             0xc7 => Instruction::RST(0x00),
-            0xc8 => Instruction::RETCOND(Condition::Z),
+            0xc8 => Instruction::RETCOND(ConditionOp::Z),
             0xc9 => Instruction::RET,
-            0xca => Instruction::JCOND(Condition::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
-            0xcc => Instruction::CCOND(Condition::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xca => Instruction::JCOND(ConditionOp::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xcc => Instruction::CCOND(ConditionOp::Z, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xcd => Instruction::CALL(create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xce => Instruction::ACI(self.memory[instr_lo_byte_ind]),
             0xcf => Instruction::RST(0x01),
-            0xd0 => Instruction::RETCOND(Condition::NC),
+            0xd0 => Instruction::RETCOND(ConditionOp::NC),
             0xd1 => Instruction::POP(RegisterPair::DE),
-            0xd2 => Instruction::JCOND(Condition::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xd2 => Instruction::JCOND(ConditionOp::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xd3 => Instruction::OUT(self.memory[instr_lo_byte_ind]),
-            0xd4 => Instruction::CCOND(Condition::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xd4 => Instruction::CCOND(ConditionOp::NC, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xd5 => Instruction::PUSH(RegisterPair::DE),
             0xd6 => Instruction::SUI(self.memory[instr_lo_byte_ind]),
             0xd7 => Instruction::RST(0x02),
-            0xd8 => Instruction::RETCOND(Condition::C),
-            0xda => Instruction::JCOND(Condition::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xd8 => Instruction::RETCOND(ConditionOp::C),
+            0xda => Instruction::JCOND(ConditionOp::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xdb => Instruction::IN(self.memory[instr_lo_byte_ind]),
-            0xdc => Instruction::CCOND(Condition::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xdc => Instruction::CCOND(ConditionOp::C, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xde => Instruction::SBI(self.memory[instr_lo_byte_ind]),
             0xdf => Instruction::RST(0x03),
-            0xe0 => Instruction::RETCOND(Condition::PO),
+            0xe0 => Instruction::RETCOND(ConditionOp::PO),
             0xe1 => Instruction::POP(RegisterPair::HL),
-            0xe2 => Instruction::JCOND(Condition::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xe2 => Instruction::JCOND(ConditionOp::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xe3 => Instruction::XTHL,
-            0xe4 => Instruction::CCOND(Condition::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xe4 => Instruction::CCOND(ConditionOp::PO, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xe5 => Instruction::PUSH(RegisterPair::HL),
             0xe6 => Instruction::ANI(self.memory[instr_lo_byte_ind]),
             0xe7 => Instruction::RST(0x04),
-            0xe8 => Instruction::RETCOND(Condition::PE),
+            0xe8 => Instruction::RETCOND(ConditionOp::PE),
             0xe9 => Instruction::PCHL,
-            0xea => Instruction::JCOND(Condition::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xea => Instruction::JCOND(ConditionOp::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xeb => Instruction::XCHG,
-            0xec => Instruction::CCOND(Condition::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xec => Instruction::CCOND(ConditionOp::PE, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xee => Instruction::XRI(self.memory[instr_lo_byte_ind]),
             0xef => Instruction::RST(0x05),
-            0xf0 => Instruction::RETCOND(Condition::P),
+            0xf0 => Instruction::RETCOND(ConditionOp::P),
             0xf1 => Instruction::POP_PSW,
-            0xf2 => Instruction::JCOND(Condition::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xf2 => Instruction::JCOND(ConditionOp::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xf3 => Instruction::DI,
-            0xf4 => Instruction::CCOND(Condition::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xf4 => Instruction::CCOND(ConditionOp::P, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xf5 => Instruction::PUSH_PSW,
             0xf6 => Instruction::ORI(self.memory[instr_lo_byte_ind]),
             0xf7 => Instruction::RST(0x06),
-            0xf8 => Instruction::RETCOND(Condition::M),
+            0xf8 => Instruction::RETCOND(ConditionOp::M),
             0xf9 => Instruction::SPHL,
-            0xfa => Instruction::JCOND(Condition::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xfa => Instruction::JCOND(ConditionOp::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xfb => Instruction::EI,
-            0xfc => Instruction::CCOND(Condition::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
+            0xfc => Instruction::CCOND(ConditionOp::M, create_addr(self.memory[instr_lo_byte_ind], self.memory[instr_hi_byte_ind])),
             0xfe => Instruction::CPI(self.memory[instr_lo_byte_ind]),
             0xff => Instruction::RST(0x07),
             _ => Instruction::NOP,//if unrecognized, default to NOOP
@@ -319,6 +335,16 @@ impl CPU {
 
     pub fn reset_pc(&mut self) {
         self.pc = 0;
+    }
+
+
+    pub fn set_register(&mut self, reg: Register, val: u8) {
+        self.registers.insert(reg, val);
+    }
+
+    pub fn get_register(&self, reg: &Register) -> u8 {
+        self.registers.get(&reg).expect(
+            format!("Invalid register requested: {:?}", reg).as_str()).clone()
     }
 }
 

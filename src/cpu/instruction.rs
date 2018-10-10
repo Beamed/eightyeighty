@@ -1,5 +1,5 @@
 use super::register::{Register, RegisterPair, RegisterOp, RegisterPairOp};
-use super::condition::{Condition, ConditionOpCode};
+use super::condition::{ConditionOp, ConditionOpCode};
 use super::{Address, Port};
 
 pub type Word = u8;
@@ -43,16 +43,16 @@ pub enum Instruction {
     RAL,
     RAR,
     RIM,
-    RETCOND(Condition),
+    RETCOND(ConditionOp),
     RET,
     SIM,
     CMA,
     CMC,
     STC,
     JMP(Address),
-    JCOND(Condition, Address),
+    JCOND(ConditionOp, Address),
     CALL(Address),
-    CCOND(Condition, Address),
+    CCOND(ConditionOp, Address),
     RST(u8),
     PCHL,
     PUSH(RegisterPair),
